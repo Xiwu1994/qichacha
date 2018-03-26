@@ -4,8 +4,38 @@
 #
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
-
+import random
+import base64
 from scrapy import signals
+import urllib
+
+
+class RandomUserAgent(object):
+    """Randomly rotate user agents based on a list of predefined ones"""
+
+    def __init__(self, agents):
+        self.agents = agents
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.settings.getlist('USER_AGENTS'))
+
+    def process_request(self, request, spider):
+        request.headers.setdefault('User-Agent', random.choice(self.agents))
+
+
+class ProxyMiddleware(object):
+    order = "9185a90f4d399f88c0cb3dbb6de084a1"
+    apiUrl = "http://dynamic.goubanjia.com/dynamic/get/" + order + ".html"
+
+    def get_new_ip(self):
+        res = urllib.urlopen(self.apiUrl).read().strip("\n")
+        ips = res.split("\n")
+        return random.choice(ips)
+
+    def process_request(self, request, spider):
+        proxy = self.get_new_ip()
+        request.meta['proxy'] = "http://%s" % proxy
 
 
 class QichachaSpiderMiddleware(object):

@@ -14,10 +14,14 @@ insert_sql = "insert into customer_company_extended_info_from_qichacha(%s) value
 
 class MysqlPipeline(object):
     def __init__(self):
-        self.mysql_host = "192.168.203.16"
+        # self.mysql_host = "192.168.203.16"
+        # self.mysql_port = "3306"
+        # self.mysql_user = "ynapp"
+        # self.mysql_password = "ynapppass"
+        self.mysql_host = "localhost"
         self.mysql_port = "3306"
-        self.mysql_user = "ynapp"
-        self.mysql_password = "ynapppass"
+        self.mysql_user = "root"
+        self.mysql_password = "root"
         self.mysql_database = "beeper2_bi"
         self.client = torndb.Connection("%s:%s" % (self.mysql_host, self.mysql_port), self.mysql_database,
                                         user=self.mysql_user, password=self.mysql_password)
