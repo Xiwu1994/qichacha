@@ -1,2 +1,4 @@
 .idea/
 customer_company_name
+qichacha/*.pyc
+qichacha/spiders/*.pyc
