@@ -31,8 +31,8 @@ class DmozSpider(scrapy.spiders.Spider):
             sel = elem.xpath('./td[2]/a[re:test(@href, "firm_.*.html")]')[0]
             qcc_company_name = ''.join(sel.xpath('.//text()').extract())
             # 如果没有存在mysql库里
-            if self.query_company_exits(qcc_company_name):
-                print "%s already in mysql" % qcc_company_name
+            if self.query_company_exits(qcc_company_name.encode('utf-8')):
+                print "%s already in mysql" % qcc_company_name.encode('utf-8')
                 continue
             m = re.match(r'(/firm_)(.*)(.html)', sel.xpath('./@href').extract()[0])
             if m is not None:
