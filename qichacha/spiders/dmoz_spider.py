@@ -23,15 +23,6 @@ class DmozSpider(scrapy.spiders.Spider):
         for i in xrange(1, 501):
             yield scrapy.Request(url % i, dont_filter=True)
 
-        # item = QichachaItem()
-        #
-        # # 如果没有存在mysql库里
-        # if not self.query_company_exits(item['yn_company_name']):
-        #     url = "http://www.qichacha.com/search?key=%s" % customer_company_name
-        #     yield scrapy.Request(url, dont_filter=True, meta={'item': item})
-        # else:
-        #     print "%s already in mysql" % customer_company_name
-
     def parse(self, response):
         # select one company
         self.check_need_verify(response)
@@ -62,7 +53,7 @@ class DmozSpider(scrapy.spiders.Spider):
         """
         item = response.meta['item']
         if self.debug:
-            print "begin parse_company_base_detail %s" % item['qcc_company_name']
+            print "begin parse_company_base_detail %s" % item['qcc_company_name'].encode('utf-8')
         item["company_addr"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[10]/td[2]/text()') # 公司地址
         item["headquarters_city_name"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[7]/td[2]/text()') # 总部所在城市
         item["establishment_time"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[2]/td[4]/text()') # 成立时间
@@ -89,7 +80,7 @@ class DmozSpider(scrapy.spiders.Spider):
         """
         item = response.meta['item']
         if self.debug:
-            print "begin parse_company_run_detail %s" % item['qcc_company_name']
+            print "begin parse_company_run_detail %s" % item['qcc_company_name'].encode('utf-8')
         listing_situation = self.get_xpath_info(response, '//*[@id="financingList"]/table/tr[2]/td[4]/text()')  # 上市or融资情况
         if listing_situation == u"IPO":
             item["listing_situation"] = u"上市"
