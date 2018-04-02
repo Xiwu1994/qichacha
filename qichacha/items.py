@@ -18,11 +18,10 @@ class QichachaItem(scrapy.Item):
     # define the fields for your item here like:
 
     company_unique = scrapy.Field()
+    company_status = scrapy.Field()
     detail_base_url = scrapy.Field()
     detail_run_url = scrapy.Field()
 
-    yn_company_name = scrapy.Field() # 云鸟公司名称
-    yn_company_name_hash_code = scrapy.Field()  # 云鸟公司名称hash code
     qcc_company_name = scrapy.Field() # 企查查公司名称
     company_addr = scrapy.Field()  # 公司地址
     headquarters_city_name = scrapy.Field()  # 总部所在城市

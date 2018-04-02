@@ -15,68 +15,46 @@ class DmozSpider(scrapy.spiders.Spider):
     name = "qichacha"
     allowed_domains = ["www.qichacha.com"]
     customer_company_name_path = "/Users/liebaomac/PycharmProjects/qichacha/customer_company_name"
-    # client = torndb.Connection("192.168.203.16:3306", "beeper2_bi", user="ynapp", password="ynapppass")
     client = torndb.Connection("localhost:3306", "beeper2_bi", user="root", password="root")
 
     def start_requests(self):
         # main run
-        customer_company_name_list = self.read_customer_company_name()
-        for customer_company_name in customer_company_name_list:
-            # proxy = self.get_new_ip()
-            # print "proxyIp: ", proxy
-            item = QichachaItem()
-            item["yn_company_name"] = customer_company_name
-            md5_handle.update(customer_company_name)
-            item['yn_company_name_hash_code'] = md5_handle.hexdigest()
-            # 如果没有存在mysql库里
-            if not self.query_company_exits(item['yn_company_name']):
-                url = "http://www.qichacha.com/search?key=%s" % customer_company_name
-                yield scrapy.Request(url, dont_filter=True, meta={'item': item})
-            else:
-                print "%s already in mysql" % customer_company_name
+        url = u"http://www.qichacha.com/search_index?key=物流&ajaxflag=1&p=%s&"
+        for i in xrange(1, 501):
+            yield scrapy.Request(url % i, dont_filter=True)
+
+        # item = QichachaItem()
+        #
+        # # 如果没有存在mysql库里
+        # if not self.query_company_exits(item['yn_company_name']):
+        #     url = "http://www.qichacha.com/search?key=%s" % customer_company_name
+        #     yield scrapy.Request(url, dont_filter=True, meta={'item': item})
+        # else:
+        #     print "%s already in mysql" % customer_company_name
 
     def parse(self, response):
         # select one company
         self.check_need_verify(response)
-        item = response.meta['item']
-        find_flag = 0
-        if self.debug:
-            print "begin parse %s" % item['yn_company_name']
+
         for elem in response.xpath('//*[@id="searchlist"]/table/tbody/tr'):
             sel = elem.xpath('./td[2]/a[re:test(@href, "firm_.*.html")]')[0]
-            company_name = ''.join(sel.xpath('.//text()').extract())
+            qcc_company_name = ''.join(sel.xpath('.//text()').extract())
+            # 如果没有存在mysql库里
+            if self.query_company_exits(qcc_company_name):
+                print "%s already in mysql" % qcc_company_name
+                continue
             m = re.match(r'(/firm_)(.*)(.html)', sel.xpath('./@href').extract()[0])
             if m is not None:
-                # 如果yn公司和qcc公司名字不一致
-                if item['yn_company_name'].replace("（","(").replace("）",")") == company_name.encode('utf-8').replace("（","(").replace("）",")"):
-                    company_unique = m.group(2)
-                    item['company_unique'] = company_unique
-                    detail_url = "%s/company_getinfos?unique=%s&companyname=%s&tab=%s"
-                    item['qcc_company_name'] = company_name
-                    item['detail_base_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "base")
-                    item['detail_run_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "run")
-                    find_flag = 1
-                    break
-                else:
-                    print "yn_company_name: %s <> qcc_company_name: %s" %(item['yn_company_name'], company_name.encode('utf-8'))
-        if find_flag:
-            # 找到名字匹配
-            yield scrapy.Request(item['detail_base_url'], dont_filter=True, meta={'item': item},
+                item = QichachaItem()
+                item['company_unique'] = m.group(2)
+                item['company_status'] = self.get_xpath_info(elem, './td[3]/span/text()')
+                detail_url = "%s/company_getinfos?unique=%s&companyname=%s&tab=%s"
+                item['qcc_company_name'] = qcc_company_name
+                item['detail_base_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "base")
+                item['detail_run_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "run")
+                yield scrapy.Request(item['detail_base_url'], dont_filter=True, meta={'item': item},
                                  headers=response.request.headers, callback=self.parse_company_base_detail)
-        else:
-            # 没找到名字匹配  默认取第一条
-            print "can not find company: %s. So choose the first one" % item['yn_company_name']
-            sel = response.xpath('//*[@id="searchlist"]/table/tbody/tr')[0].xpath('./td[2]/a[re:test(@href, "firm_.*.html")]')[0]
-            company_name = ''.join(sel.xpath('.//text()').extract())
-            m = re.match(r'(/firm_)(.*)(.html)', sel.xpath('./@href').extract()[0])
-            company_unique = m.group(2)
-            item['company_unique'] = company_unique
-            detail_url = "%s/company_getinfos?unique=%s&companyname=%s&tab=%s"
-            item['qcc_company_name'] = company_name
-            item['detail_base_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "base")
-            item['detail_run_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "run")
-            yield scrapy.Request(item['detail_base_url'], dont_filter=True, meta={'item': item},
-                                 headers=response.request.headers, callback=self.parse_company_base_detail)
+
 
     def parse_company_base_detail(self, response):
         """
@@ -84,7 +62,7 @@ class DmozSpider(scrapy.spiders.Spider):
         """
         item = response.meta['item']
         if self.debug:
-            print "begin parse_company_base_detail %s" % item['yn_company_name']
+            print "begin parse_company_base_detail %s" % item['qcc_company_name']
         item["company_addr"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[10]/td[2]/text()') # 公司地址
         item["headquarters_city_name"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[7]/td[2]/text()') # 总部所在城市
         item["establishment_time"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[2]/td[4]/text()') # 成立时间
@@ -111,7 +89,7 @@ class DmozSpider(scrapy.spiders.Spider):
         """
         item = response.meta['item']
         if self.debug:
-            print "begin parse_company_run_detail %s" % item['yn_company_name']
+            print "begin parse_company_run_detail %s" % item['qcc_company_name']
         listing_situation = self.get_xpath_info(response, '//*[@id="financingList"]/table/tr[2]/td[4]/text()')  # 上市or融资情况
         if listing_situation == u"IPO":
             item["listing_situation"] = u"上市"
@@ -167,7 +145,7 @@ class DmozSpider(scrapy.spiders.Spider):
         """
         return response.xpath('normalize-space(%s)' % (xpath_str)).extract_first()
 
-    def query_company_exits(self, yn_company_name):
+    def query_company_exits(self, qcc_company_name):
         return len(self.client.query(
-            "select 1 from customer_company_extended_info_from_qichacha_1 where yn_company_name='%s'" % (
-                yn_company_name)))
+            "select 1 from customer_company_extended_info_from_qichacha_2 where qcc_company_name='%s'" % (
+                qcc_company_name)))
