@@ -35,6 +35,8 @@ class ProxyMiddleware(object):
 
     def process_request(self, request, spider):
         proxy = self.get_new_ip()
+        print "proxy ip: ", proxy
+        # proxy = "119.28.138.104:3128"
         request.meta['proxy'] = "http://%s" % proxy
 
 

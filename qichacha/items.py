@@ -31,7 +31,7 @@ class QichachaItem(scrapy.Item):
     registered_money = scrapy.Field()  # 注册资本
     industry_name = scrapy.Field()  # 所属行业
     company_nature = scrapy.Field()  # 公司性质
-    work_city_list = scrapy.Field()  # 业务城市列表
+    work_city_num = scrapy.Field()  # 业务城市列表
     staff_num = scrapy.Field()  # 员工数
     recruitment_num = scrapy.Field()  # 招聘岗位数
 

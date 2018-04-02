@@ -8,9 +8,9 @@ import torndb
 
 column_list = ['yn_company_name','yn_company_name_hash_code','company_unique','detail_base_url','detail_run_url','qcc_company_name','company_addr',
                'headquarters_city_name','establishment_time','working_time','registered_money','industry_name','company_nature',
-               'work_city_list','staff_num','recruitment_num','listing_situation','financing_situation','financing_last_time_money',
+               'work_city_num','staff_num','recruitment_num','listing_situation','financing_situation','financing_last_time_money',
                'company_valuation','scope_operation','competence_level','net_profit_rate','tax_zone','profit_rate','tax_credit_level']
-insert_sql = "insert into customer_company_extended_info_from_qichacha(%s) values (%s)" %(",".join(column_list), ",".join(["%s"] * len(column_list)))
+insert_sql = "insert into customer_company_extended_info_from_qichacha_1(%s) values (%s)" %(",".join(column_list), ",".join(["%s"] * len(column_list)))
 
 class MysqlPipeline(object):
     def __init__(self):

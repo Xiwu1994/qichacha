@@ -14,7 +14,7 @@ class DmozSpider(scrapy.spiders.Spider):
     debug = True
     name = "qichacha"
     allowed_domains = ["www.qichacha.com"]
-    customer_company_name_path = "./customer_company_name"
+    customer_company_name_path = "/Users/liebaomac/PycharmProjects/qichacha/customer_company_name"
     # client = torndb.Connection("192.168.203.16:3306", "beeper2_bi", user="ynapp", password="ynapppass")
     client = torndb.Connection("localhost:3306", "beeper2_bi", user="root", password="root")
 
@@ -29,7 +29,7 @@ class DmozSpider(scrapy.spiders.Spider):
             md5_handle.update(customer_company_name)
             item['yn_company_name_hash_code'] = md5_handle.hexdigest()
             # 如果没有存在mysql库里
-            if not self.query_company_exits(item['yn_company_name_hash_code']):
+            if not self.query_company_exits(item['yn_company_name']):
                 url = "http://www.qichacha.com/search?key=%s" % customer_company_name
                 yield scrapy.Request(url, dont_filter=True, meta={'item': item})
             else:
@@ -60,10 +60,23 @@ class DmozSpider(scrapy.spiders.Spider):
                 else:
                     print "yn_company_name: %s <> qcc_company_name: %s" %(item['yn_company_name'], company_name.encode('utf-8'))
         if find_flag:
+            # 找到名字匹配
             yield scrapy.Request(item['detail_base_url'], dont_filter=True, meta={'item': item},
                                  headers=response.request.headers, callback=self.parse_company_base_detail)
         else:
-            print "can not find company: %s" % item['yn_company_name']
+            # 没找到名字匹配  默认取第一条
+            print "can not find company: %s. So choose the first one" % item['yn_company_name']
+            sel = response.xpath('//*[@id="searchlist"]/table/tbody/tr')[0].xpath('./td[2]/a[re:test(@href, "firm_.*.html")]')[0]
+            company_name = ''.join(sel.xpath('.//text()').extract())
+            m = re.match(r'(/firm_)(.*)(.html)', sel.xpath('./@href').extract()[0])
+            company_unique = m.group(2)
+            item['company_unique'] = company_unique
+            detail_url = "%s/company_getinfos?unique=%s&companyname=%s&tab=%s"
+            item['qcc_company_name'] = company_name
+            item['detail_base_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "base")
+            item['detail_run_url'] = detail_url % (URL_PRE, item['company_unique'], item['qcc_company_name'], "run")
+            yield scrapy.Request(item['detail_base_url'], dont_filter=True, meta={'item': item},
+                                 headers=response.request.headers, callback=self.parse_company_base_detail)
 
     def parse_company_base_detail(self, response):
         """
@@ -85,8 +98,9 @@ class DmozSpider(scrapy.spiders.Spider):
         item["company_nature"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[5]/td[2]/text()')  # 公司性质
         item["staff_num"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[9]/td[2]/text()')  # 员工数
         item["scope_operation"] = self.get_xpath_info(response, '//*[@id="Cominfo"]/table[2]/tr[11]/td[2]/text()')  # 经营范围
-        item["work_city_list"] = " + ".join(self.get_xpath_info(branch_name, './td[2]/a/span/text()') for branch_name in
-                                            response.xpath('//*[@id="Subcom"]/table/tr')) # 业务城市列表(分支机构)
+        #item["work_city_list"] = " + ".join(self.get_xpath_info(branch_name, './td[2]/a/span/text()') for branch_name in
+        #                                    response.xpath('//*[@id="Subcom"]/table/tr')) # 业务城市列表(分支机构)
+        item["work_city_num"] = len(response.xpath('//*[@id="Subcom"]/table/tr'))
         yield scrapy.Request(item['detail_run_url'], dont_filter=True, meta={'item': item},
                              headers=response.request.headers,
                              callback=self.parse_company_run_detail)
@@ -153,7 +167,7 @@ class DmozSpider(scrapy.spiders.Spider):
         """
         return response.xpath('normalize-space(%s)' % (xpath_str)).extract_first()
 
-    def query_company_exits(self, yn_company_name_hash_code):
+    def query_company_exits(self, yn_company_name):
         return len(self.client.query(
-            "select 1 from customer_company_extended_info_from_qichacha where yn_company_name_hash_code='%s'" % (
-                yn_company_name_hash_code)))
+            "select 1 from customer_company_extended_info_from_qichacha_1 where yn_company_name='%s'" % (
+                yn_company_name)))
